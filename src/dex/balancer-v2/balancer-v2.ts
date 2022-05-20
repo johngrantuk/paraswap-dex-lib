@@ -576,7 +576,7 @@ export class BalancerV2
     };
   }
 
-  private getBalancerParam(
+  public getBalancerParam(
     srcToken: string,
     destToken: string,
     srcAmount: string,

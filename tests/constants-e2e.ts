@@ -7,6 +7,10 @@ export const Tokens: { [network: number]: { [symbol: string]: Token } } = {
       address: ETHER_ADDRESS,
       decimals: 18,
     },
+    AMON: {
+      address: '0x5c1892bb9e42b4bf89e5b0b21542e2f8622a0bb8',
+      decimals: 18,
+    },
     REQ: {
       address: '0x8f8221aFbB33998d8584A2B05749bA73c37a938a',
       decimals: 18,
@@ -484,6 +488,7 @@ export const Holders: {
 } = {
   [Network.MAINNET]: {
     ETH: '0x73BCEb1Cd57C711feaC4224D062b0F6ff338501e',
+    AMON: '0x3467eba885767d3ac9e754380036ab04d275942a',
     USDC: '0x0f4ee9631f4be0a63756515141281a3e2b293bbe',
     WBTC: '0x6daB3bCbFb336b29d06B9C793AEF7eaA57888922',
     BADGER: '0x34e2741a3f8483dbe5231f61c005110ff4b9f50a',
