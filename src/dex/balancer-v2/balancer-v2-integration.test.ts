@@ -5,6 +5,7 @@ import { DummyDexHelper } from '../../dex-helper/index';
 import { Network, SwapSide } from '../../constants';
 import { BalancerV2 } from './balancer-v2';
 import { checkPoolPrices, checkPoolsLiquidity } from '../../../tests/utils';
+import { BI_POWS } from '../../bigint-constants';
 
 const WETH = {
   address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
@@ -16,8 +17,13 @@ const DAI = {
   decimals: 18,
 };
 
+const USDC = {
+  address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+  decimals: 6,
+};
+
 const BBADAI = {
-  address: '0x804cdb9116a10bb78768d3252355a1b18067bf8f',
+  address: '0x804cdb9116a10bb78768d31500002355a1b18067bf8f',
   decimals: 18,
 };
 
@@ -26,13 +32,11 @@ const BBAUSD = {
   decimals: 18,
 };
 
-const amounts = [
-  BigInt('0'),
-  BigInt('1000000000000000000'),
-  BigInt('2000000000000000000'),
-];
+const amounts = [0n, BI_POWS[18], 2000000000000000000n];
 
 const dexKey = 'BalancerV2';
+
+jest.setTimeout(50 * 1000);
 
 describe('BalancerV2', function () {
   describe('Weighted', () => {
@@ -41,7 +45,7 @@ describe('BalancerV2', function () {
       const blocknumber = await dexHelper.provider.getBlockNumber();
       const balancerV2 = new BalancerV2(Network.MAINNET, dexKey, dexHelper);
 
-      await balancerV2.setupEventPools(blocknumber);
+      await balancerV2.initializePricing(blocknumber);
 
       const pools = await balancerV2.getPoolIdentifiers(
         WETH,
@@ -49,7 +53,7 @@ describe('BalancerV2', function () {
         SwapSide.SELL,
         blocknumber,
       );
-      console.log('WETH <> DAI Pool Ideintifiers: ', pools);
+      console.log('WETH <> DAI Pool Identifiers: ', pools);
 
       expect(pools.length).toBeGreaterThan(0);
 
@@ -62,9 +66,9 @@ describe('BalancerV2', function () {
         pools,
       );
       console.log('WETH <> DAI Pool Prices: ', poolPrices);
-
       expect(poolPrices).not.toBeNull();
       checkPoolPrices(poolPrices!, amounts, SwapSide.SELL, dexKey);
+      expect(poolPrices?.[0].gasCost).toBe(150000); // TO DO
     });
 
     it('getTopPoolsForToken', async function () {
@@ -87,7 +91,7 @@ describe('BalancerV2', function () {
       const blocknumber = await dexHelper.provider.getBlockNumber();
       const balancerV2 = new BalancerV2(Network.MAINNET, dexKey, dexHelper);
 
-      await balancerV2.setupEventPools(blocknumber);
+      await balancerV2.initializePricing(blocknumber);
 
       const pools = await balancerV2.getPoolIdentifiers(
         DAI,
@@ -95,7 +99,7 @@ describe('BalancerV2', function () {
         SwapSide.SELL,
         blocknumber,
       );
-      console.log('DAI <> BBADAI Pool Ideintifiers: ', pools);
+      console.log('DAI <> BBADAI Pool Identifiers: ', pools);
 
       expect(pools.length).toBeGreaterThan(0);
 
@@ -111,6 +115,7 @@ describe('BalancerV2', function () {
 
       expect(poolPrices).not.toBeNull();
       checkPoolPrices(poolPrices!, amounts, SwapSide.SELL, dexKey);
+      expect(poolPrices?.[0].gasCost).toBe(100000); // TO DO
     });
 
     it('getTopPoolsForToken', async function () {
@@ -140,7 +145,7 @@ describe('BalancerV2', function () {
     //   const blocknumber = await dexHelper.provider.getBlockNumber();
     //   const balancerV2 = new BalancerV2(Network.MAINNET, dexKey, dexHelper);
 
-    //   await balancerV2.setupEventPools(blocknumber);
+    //   await balancerV2.initializePricing(blocknumber);
 
     //   const pools = await balancerV2.getPoolIdentifiers(
     //     BBAUSD,
@@ -148,7 +153,7 @@ describe('BalancerV2', function () {
     //     SwapSide.SELL,
     //     blocknumber,
     //   );
-    //   console.log('BBAUSD <> BBADAI Pool Ideintifiers: ', pools);
+    //   console.log('BBAUSD <> BBADAI Pool Identifiers: ', pools);
 
     //   expect(pools.length).toBeGreaterThan(0);
 
@@ -177,6 +182,90 @@ describe('BalancerV2', function () {
       console.log('BBAUSD Top Pools:', poolLiquidity);
 
       checkPoolsLiquidity(poolLiquidity, BBAUSD.address, dexKey);
+    });
+  });
+
+  describe('VirtualBoosted Pools', () => {
+    it('getPoolIdentifiers and getPricesVolume', async function () {
+      const dexHelper = new DummyDexHelper(Network.MAINNET);
+      const blocknumber = await dexHelper.provider.getBlockNumber();
+      const balancerV2 = new BalancerV2(Network.MAINNET, dexKey, dexHelper);
+
+      await balancerV2.initializePricing(blocknumber);
+
+      const pools = await balancerV2.getPoolIdentifiers(
+        DAI,
+        USDC,
+        SwapSide.SELL,
+        blocknumber,
+      );
+      console.log('DAI <> USDC Pool Ideintifiers: ', pools);
+
+      expect(pools.length).toBeGreaterThan(0);
+      // VirtualBoosted pool should return identifiers for all the internal pools
+      // for bbausd this is 3 Linear pools and the PhantomStable linking them
+      expect(pools).toContain(
+        'BalancerV2_0x7b50775383d3d6f0215a8f290f2c9e2eebbeceb2virtualboosted',
+      );
+      expect(pools).toContain(
+        'BalancerV2_0x7b50775383d3d6f0215a8f290f2c9e2eebbeceb2', // PhantomStable
+      );
+      expect(pools).toContain(
+        'BalancerV2_0x2bbf681cc4eb09218bee85ea2a5d3d13fa40fc0c', // bUSDT (Linear)
+      );
+      expect(pools).toContain(
+        'BalancerV2_0x804cdb9116a10bb78768d3252355a1b18067bf8f', // bDAI (Linear)
+      );
+      expect(pools).toContain(
+        'BalancerV2_0x9210f1204b5a24742eba12f710636d76240df3d0', // bUSDC (Linear)
+      );
+
+      const poolPrices = await balancerV2.getPricesVolume(
+        DAI,
+        USDC,
+        amounts,
+        SwapSide.SELL,
+        blocknumber,
+        pools,
+      );
+      console.log('DAI <> USDC Pool Prices: ', poolPrices);
+
+      expect(poolPrices).not.toBeNull();
+      checkPoolPrices(poolPrices!, amounts, SwapSide.SELL, dexKey);
+      const virtualPoolIdentifier = poolPrices?.find(
+        p =>
+          p.poolIdentifier!.toLowerCase() ===
+          'BalancerV2_0x7b50775383d3d6f0215a8f290f2c9e2eebbeceb20000000000000000000000fevirtualboosted'.toLowerCase(),
+      );
+      expect(virtualPoolIdentifier).not.toBeUndefined();
+      expect(virtualPoolIdentifier?.poolAddresses).toEqual([
+        '0x7b50775383d3d6f0215a8f290f2c9e2eebbeceb2',
+        '0x2bbf681cc4eb09218bee85ea2a5d3d13fa40fc0c',
+        '0x804cdb9116a10bb78768d3252355a1b18067bf8f',
+        '0x9210f1204b5a24742eba12f710636d76240df3d0',
+      ]);
+      expect(virtualPoolIdentifier?.data.poolId).toEqual(
+        '0x7b50775383d3d6f0215a8f290f2c9e2eebbeceb20000000000000000000000fevirtualboosted',
+      );
+      expect(virtualPoolIdentifier?.gasCost).toBe(100000 * 2 + 130000); // TO DO 2 * Linear + 1 * Phantom
+    });
+
+    it('getTopPoolsForToken', async function () {
+      const dexHelper = new DummyDexHelper(Network.MAINNET);
+      const balancerV2 = new BalancerV2(Network.MAINNET, dexKey, dexHelper);
+
+      const poolLiquidity = await balancerV2.getTopPoolsForToken(
+        DAI.address,
+        10,
+      );
+      console.log('DAI Top Pools:', poolLiquidity);
+
+      const virtualPool = poolLiquidity?.find(
+        p => p.address === '0x7b50775383d3d6f0215a8f290f2c9e2eebbeceb2',
+      );
+      expect(virtualPool).not.toBeUndefined();
+
+      checkPoolsLiquidity(poolLiquidity, DAI.address, dexKey);
     });
   });
 });

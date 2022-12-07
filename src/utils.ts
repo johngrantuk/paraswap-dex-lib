@@ -1,8 +1,6 @@
+import { BI_POWS } from './bigint-constants';
 import { ETHER_ADDRESS, Network } from './constants';
 import { Address, Token, DexConfigMap } from './types';
-
-export const isETHAddress = (address: string) =>
-  address.toLowerCase() === ETHER_ADDRESS.toLowerCase();
 
 export const WethMap: { [network: number]: Address } = {
   1: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
@@ -14,6 +12,12 @@ export const WethMap: { [network: number]: Address } = {
   43114: '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7',
   250: '0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83',
 };
+
+export const isETHAddress = (address: string) =>
+  address.toLowerCase() === ETHER_ADDRESS.toLowerCase();
+
+export const isWETH = (address: Address, network = 1) =>
+  WethMap[network].toLowerCase() === address.toLowerCase();
 
 export const wrapETH = (token: Token, network: number): Token =>
   isETHAddress(token.address) && WethMap[network]
@@ -62,3 +66,15 @@ export function getDexKeysWithNetwork<T>(
     networks: Object.keys(dValue).map(n => parseInt(n)),
   }));
 }
+
+// This is needed in order to not modify existing logic and use this wrapper
+// to be safe if we receive not cached decimals
+export function getBigIntPow(decimals: number): bigint {
+  const value = BI_POWS[decimals];
+  // It is not accurate to create 10 ** 23 and more decimals from number type
+  return value === undefined ? BigInt(`1${'0'.repeat(decimals)}`) : value;
+}
+
+export const _require = (b: boolean, message: string) => {
+  if (!b) throw new Error(message);
+};

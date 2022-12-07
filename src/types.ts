@@ -53,6 +53,7 @@ export type ContractBuyData = {
   toToken: string;
   fromAmount: string;
   toAmount: string;
+  expectedAmount: string;
   beneficiary: string;
   route: ContractRoute[];
   partner: string;
@@ -67,6 +68,27 @@ export type ConstractSimpleData = {
   toToken: string;
   fromAmount: string;
   toAmount: string;
+  expectedAmount: string;
+  callees: string[];
+  exchangeData: string;
+  startIndexes: number[];
+  values: string[];
+  beneficiary: string;
+  partner: string;
+  feePercent: string;
+  permit: string;
+  deadline: string;
+  uuid: string;
+};
+
+export type ContractSimpleBuyNFTData = {
+  fromToken: string;
+  toTokenDetails: {
+    toToken: string;
+    toTokenID: string;
+    toAmount: string;
+  }[];
+  fromAmount: string;
   expectedAmount: string;
   callees: string[];
   exchangeData: string;
@@ -134,6 +156,10 @@ export type AdapterExchangeParam = {
   networkFee: string;
 };
 
+export type AdapterMappings = {
+  [side: string]: { name: string; index: number }[];
+};
+
 export type SimpleExchangeParam = {
   callees: string[];
   calldata: string[];
@@ -150,6 +176,13 @@ export type Token = {
   symbol?: string;
 };
 
+export type aToken = {
+  aSymbol: string;
+  aAddress: string;
+  address: string;
+  decimals: number;
+};
+
 export type ExchangePrices<T> = PoolPrices<T>[];
 
 export type PoolPrices<T> = {
@@ -158,7 +191,7 @@ export type PoolPrices<T> = {
   data: T;
   poolIdentifier?: string;
   exchange: string;
-  gasCost: number;
+  gasCost: number | number[];
   poolAddresses?: Array<Address>;
 };
 
@@ -204,3 +237,21 @@ export type UnoptimizedRate = Omit<
   OptimalRate,
   'contractMethod' | 'srcUSD' | 'destUSD' | 'hmac' | 'partnerFee'
 >;
+
+export type MultiCallInput = {
+  target: Address;
+  callData: string;
+};
+
+export type MultiCallOutput = string;
+
+export type BigIntAsString = string;
+
+export type ExchangeTxInfo = {
+  deadline?: bigint;
+};
+
+export type PreprocessTransactionOptions = {
+  slippageFactor: string;
+  txOrigin: Address;
+};
