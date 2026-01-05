@@ -27,5 +27,5 @@ export type OSwapPool = {
 };
 
 export type DexParams = {
-  pools: [OSwapPool];
+  pools: OSwapPool[];
 };

@@ -50,7 +50,7 @@ export class OSwap extends SimpleExchange implements IDex<OSwapData> {
 
   readonly iOSwap: Interface;
 
-  readonly pools: [OSwapPool];
+  readonly pools: OSwapPool[];
 
   constructor(
     readonly network: Network,
