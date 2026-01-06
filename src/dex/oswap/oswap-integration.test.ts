@@ -141,7 +141,7 @@ describe('OSwap', function () {
   let blockNumber: number;
   let oswap: OSwap;
 
-  describe('Mainnet', () => {
+  describe('Mainnet - WETH/STETH Pool', () => {
     const network = Network.MAINNET;
     const dexHelper = new DummyDexHelper(network);
 
@@ -289,7 +289,7 @@ describe('OSwap', function () {
     });
   });
 
-  describe('Sonic', () => {
+  describe('Sonic - WS/OS Pool', () => {
     const network = Network.SONIC;
     const dexHelper = new DummyDexHelper(network);
 
@@ -475,7 +475,7 @@ describe('OSwap', function () {
     ];
 
     async function getBlockNumberForTesting(oswap: OSwap): Promise<number> {
-      const DEFAULT_BLOCK_NUMBER = 18888241;
+      const DEFAULT_BLOCK_NUMBER = 24174745;
 
       blockNumber = await dexHelper.web3Provider.eth.getBlockNumber();
       const srcToken = Tokens[network][srcTokenSymbol];
@@ -617,7 +617,7 @@ describe('OSwap', function () {
     ];
 
     async function getBlockNumberForTesting(oswap: OSwap): Promise<number> {
-      const DEFAULT_BLOCK_NUMBER = 18888241;
+      const DEFAULT_BLOCK_NUMBER = 24174745;
 
       const currentBlockNumber = await dexHelper.web3Provider.eth.getBlockNumber();
       const srcToken = Tokens[network][srcTokenSymbol];
