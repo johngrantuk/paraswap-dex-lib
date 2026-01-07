@@ -239,6 +239,8 @@ export class OSwapEventPool extends StatefulEventSubscriber<OSwapPoolState> {
     const amount = event.args.value.toBigInt();
 
     // Check if this is an ERC4626 asset transfer to vault (for sUSDe-USDe pool)
+    // Note: We need to update totalAssets AND balance if the transfer is from/to the pool
+    let updatedTotalAssets: string | undefined = undefined;
     if (
       isSusdeUsdePool(this.pool.id) &&
       tokenAddress === this.pool.token0.toLowerCase() && // USDe (underlying asset)
@@ -246,12 +248,12 @@ export class OSwapEventPool extends StatefulEventSubscriber<OSwapPoolState> {
       state.totalAssets
     ) {
       // Asset transfer to vault increases totalAssets
-      return {
-        ...state,
-        totalAssets: (BigInt(state.totalAssets) + amount).toString(),
-      };
+      updatedTotalAssets = (
+        BigInt(state.totalAssets) + amount
+      ).toString();
     }
 
+    // Update pool balances for transfers from/to the pool
     if (fromAddress == this.pool.address) {
       if (tokenAddress === this.pool.token0) {
         balance0 -= amount;
@@ -268,10 +270,14 @@ export class OSwapEventPool extends StatefulEventSubscriber<OSwapPoolState> {
       }
     }
 
+    // Return updated state with both balance and totalAssets updates
     return {
       ...state,
       balance0: balance0.toString(),
       balance1: balance1.toString(),
+      ...(updatedTotalAssets !== undefined && {
+        totalAssets: updatedTotalAssets,
+      }),
     };
   }
 
