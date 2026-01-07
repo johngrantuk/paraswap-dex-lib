@@ -9,6 +9,9 @@ export type OSwapPoolState = {
   balance1: string;
   withdrawsQueued: string;
   withdrawsClaimed: string;
+  // ERC4626 vault state (only for pools that use ERC4626 conversion)
+  totalAssets?: string;
+  totalShares?: string;
 };
 
 // OSwapPoolState is the state of the event subscriber. It is the minimum

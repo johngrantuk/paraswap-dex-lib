@@ -34,6 +34,7 @@ import ERC4626ABI from '../../abi/ERC4626.json';
 import { extractReturnAmountPosition } from '../../executor/utils';
 import { applyTransferFee } from '../../lib/token-transfer-fee';
 import { uint256ToBigInt } from '../../lib/decoders';
+import { isSusdeUsdePool } from './utils';
 
 export class OSwap extends SimpleExchange implements IDex<OSwapData> {
   readonly eventPools: { [id: string]: OSwapEventPool } = {};
@@ -138,34 +139,42 @@ export class OSwap extends SimpleExchange implements IDex<OSwapData> {
   }
 
   // Convert amount using pool-specific logic.
-  // For sUSDe-USDe pool, uses ERC4626 convertToAssets/convertToShares.
+  // For sUSDe-USDe pool, uses ERC4626 convertToAssets/convertToShares calculated locally.
   // For other pools, returns the amount as-is.
-  async convertAmount(
+  convertAmount(
     pool: OSwapPool,
     from: Token,
     amount: bigint,
-  ): Promise<bigint> {
-    if (pool.id === 'OSwap_0xceda2d856238aa0d12f6329de20b9115f07c366d') {
-      // token0 is USDe, token1 is sUSDe
-      const method =
-        from.address.toLowerCase() === pool.token0
-          ? 'convertToAssets'
-          : 'convertToShares';
+    state: OSwapPoolState,
+  ): bigint {
+    if (isSusdeUsdePool(pool.id)) {
+      // token0 is USDe, token1 is sUSDe (ERC4626 vault)
+      // Use ERC4626 conversion formula: convertToAssets(shares) = (shares * totalAssets) / totalShares
+      // and convertToShares(assets) = (assets * totalShares) / totalAssets
+      if (!state.totalAssets || !state.totalShares) {
+        this.logger.error(
+          `convertAmount: Missing ERC4626 state for pool ${pool.id}`,
+        );
+        return 0n;
+      }
 
-      const results = await this.dexHelper.multiWrapper.tryAggregate<bigint>(
-        true,
-        [
-          {
-            target: pool.token1,
-            callData: new Interface(ERC4626ABI).encodeFunctionData(method, [
-              amount.toString(),
-            ]),
-            decodeFunction: uint256ToBigInt,
-          },
-        ],
-      );
+      const totalAssets = BigInt(state.totalAssets);
+      const totalShares = BigInt(state.totalShares);
 
-      return results[0].returnData;
+      if (totalAssets === 0n || totalShares === 0n) {
+        return 0n;
+      }
+
+      const fromAddress = from.address.toLowerCase();
+      const isFromUsde = fromAddress === pool.token0.toLowerCase();
+
+      if (isFromUsde) {
+        // Converting from USDe (assets) to sUSDe (shares): convertToShares
+        return (amount * totalShares) / totalAssets;
+      } else {
+        // Converting from sUSDe (shares) to USDe (assets): convertToAssets
+        return (amount * totalAssets) / totalShares;
+      }
     }
 
     return amount;
@@ -174,15 +183,15 @@ export class OSwap extends SimpleExchange implements IDex<OSwapData> {
   // Sell: Given "amount" of "from" token, how much of "to" token will be received by the trader.
   // Buy: Given "amount" of "dest" token, how much of "to" token is required from the trader.
   // Note: OSwap traderate is at precision 36.
-  private async calcPrice(
+  private calcPrice(
     pool: OSwapPool,
     state: OSwapPoolState,
     from: Token,
     amount: bigint,
     side: SwapSide,
     checkLiquidity = true,
-  ): Promise<bigint> {
-    const convertedAmount = await this.convertAmount(pool, from, amount);
+  ): bigint {
+    const convertedAmount = this.convertAmount(pool, from, amount, state);
 
     const rate =
       from.address.toLowerCase() === pool.token0
@@ -271,7 +280,7 @@ export class OSwap extends SimpleExchange implements IDex<OSwapData> {
 
       // Calculate the prices
       const unitAmount = getBigIntPow(18);
-      const unitPrice = await this.calcPrice(
+      const unitPrice = this.calcPrice(
         pool,
         state,
         srcToken,
@@ -280,11 +289,9 @@ export class OSwap extends SimpleExchange implements IDex<OSwapData> {
         false,
       );
 
-      let prices: bigint[] = [];
-      for (const amount of amounts) {
-        const p = await this.calcPrice(pool, state, srcToken, amount, side);
-        prices.push(p);
-      }
+      const prices = amounts.map(amount =>
+        this.calcPrice(pool, state, srcToken, amount, side),
+      );
 
       const [unitPriceWithFee, ...pricesWithFee] = applyTransferFee(
         [unitPrice, ...prices],

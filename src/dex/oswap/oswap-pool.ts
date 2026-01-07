@@ -9,6 +9,8 @@ import { uint256ToBigInt } from '../../lib/decoders';
 import { OSwapPool, OSwapPoolState } from './types';
 import OSwapABI from '../../abi/oswap/oswap.abi.json';
 import ERC20ABI from '../../abi/ERC20.abi.json';
+import ERC4626ABI from '../../abi/ERC4626.json';
+import { isSusdeUsdePool } from './utils';
 
 export class OSwapEventPool extends StatefulEventSubscriber<OSwapPoolState> {
   handlers: {
@@ -31,6 +33,7 @@ export class OSwapEventPool extends StatefulEventSubscriber<OSwapPoolState> {
     logger: Logger,
     protected iOSwap = new Interface(OSwapABI),
     protected iERC20 = new Interface(ERC20ABI),
+    protected iERC4626 = new Interface(ERC4626ABI),
   ) {
     super(parentName, pool.id, dexHelper, logger);
 
@@ -41,11 +44,28 @@ export class OSwapEventPool extends StatefulEventSubscriber<OSwapPoolState> {
     this.handlers['Transfer'] = this.handleTransfer.bind(this);
     this.handlers['RedeemRequested'] = this.handleRedeemRequested.bind(this);
     this.handlers['RedeemClaimed'] = this.handleRedeemClaimed.bind(this);
+
+    if (isSusdeUsdePool(pool.id)) {
+      this.handlers['Deposit'] = this.handleERC4626Deposit.bind(this);
+      this.handlers['Withdraw'] = this.handleERC4626Withdraw.bind(this);
+    }
   }
 
   protected parseLog(log: Log) {
     if (log.address.toLowerCase() === this.pool.address) {
       return this.iOSwap.parseLog(log);
+    }
+
+    // Check if this is an ERC4626 event from the sUSDe vault (token1 for sUSDe-USDe pool)    
+    if (
+      isSusdeUsdePool(this.pool.id) &&
+      log.address.toLowerCase() === this.pool.token1.toLowerCase()
+    ) {
+      try {
+        return this.iERC4626.parseLog(log);
+      } catch {
+        // If it's not an ERC4626 event, fall through to ERC20
+      }
     }
     return this.iERC20.parseLog(log);
   }
@@ -124,6 +144,22 @@ export class OSwapEventPool extends StatefulEventSubscriber<OSwapPoolState> {
       },
     ];
 
+    // For sUSDe-USDe pool, also fetch ERC4626 vault state
+    if (isSusdeUsdePool(this.pool.id)) {
+      callData.push(
+        {
+          target: this.pool.token1, // sUSDe vault address
+          callData: this.iERC4626.encodeFunctionData('totalAssets', []),
+          decodeFunction: uint256ToBigInt,
+        },
+        {
+          target: this.pool.token1, // sUSDe vault address
+          callData: this.iERC4626.encodeFunctionData('totalSupply', []), // totalShares for ERC4626
+          decodeFunction: uint256ToBigInt,
+        },
+      );
+    }
+
     const results = await this.dexHelper.multiWrapper.aggregate<bigint>(
       callData,
       blockNumber,
@@ -139,7 +175,7 @@ export class OSwapEventPool extends StatefulEventSubscriber<OSwapPoolState> {
       withdrawsClaimed,
     ] = results;
 
-    return {
+    const baseState: OSwapPoolState = {
       balance0: balance0.toString(),
       balance1: balance1.toString(),
       traderate0: traderate0.toString(),
@@ -147,6 +183,14 @@ export class OSwapEventPool extends StatefulEventSubscriber<OSwapPoolState> {
       withdrawsQueued: withdrawsQueued.toString(),
       withdrawsClaimed: withdrawsClaimed.toString(),
     };
+
+    // Add ERC4626 state if this is the sUSDe-USDe pool
+    if (isSusdeUsdePool(this.pool.id) && results.length >= 8) {
+      baseState.totalAssets = results[6].toString();
+      baseState.totalShares = results[7].toString();
+    }
+
+    return baseState;
   }
 
   async getStateOrGenerate(
@@ -179,6 +223,7 @@ export class OSwapEventPool extends StatefulEventSubscriber<OSwapPoolState> {
   /**
    * Process the transfer events for tokens in/out of the pool
    * to keep the state's token balances up to date.
+   * Also handles ERC4626 asset transfers to vault for sUSDe-USDe pool.
    */
   handleTransfer(
     event: any,
@@ -192,6 +237,20 @@ export class OSwapEventPool extends StatefulEventSubscriber<OSwapPoolState> {
     const fromAddress = event.args.from.toLowerCase();
     const toAddress = event.args.to.toLowerCase();
     const amount = event.args.value.toBigInt();
+
+    // Check if this is an ERC4626 asset transfer to vault (for sUSDe-USDe pool)
+    if (
+      isSusdeUsdePool(this.pool.id) &&
+      tokenAddress === this.pool.token0.toLowerCase() && // USDe (underlying asset)
+      toAddress === this.pool.token1.toLowerCase() && // sUSDe vault
+      state.totalAssets
+    ) {
+      // Asset transfer to vault increases totalAssets
+      return {
+        ...state,
+        totalAssets: (BigInt(state.totalAssets) + amount).toString(),
+      };
+    }
 
     if (fromAddress == this.pool.address) {
       if (tokenAddress === this.pool.token0) {
@@ -238,6 +297,58 @@ export class OSwapEventPool extends StatefulEventSubscriber<OSwapPoolState> {
     return {
       ...state,
       withdrawsClaimed: (withdrawsClaimed + assets).toString(),
+    };
+  }
+
+  /**
+   * Handle ERC4626 Deposit event from sUSDe vault.
+   * Updates totalShares when assets are deposited.
+   */
+  handleERC4626Deposit(
+    event: any,
+    state: DeepReadonly<OSwapPoolState>,
+    log: Readonly<Log>,
+  ): DeepReadonly<OSwapPoolState> | null {
+    if (!state.totalShares) {
+      // If state doesn't have ERC4626 fields initialized, don't update
+      return null;
+    }
+
+    const shares = event.args.shares
+      ? BigInt(event.args.shares.toString())
+      : 0n;
+
+    return {
+      ...state,
+      totalShares: (BigInt(state.totalShares) + shares).toString(),
+    };
+  }
+
+  /**
+   * Handle ERC4626 Withdraw event from sUSDe vault.
+   * Updates both totalAssets and totalShares when assets are withdrawn.
+   */
+  handleERC4626Withdraw(
+    event: any,
+    state: DeepReadonly<OSwapPoolState>,
+    log: Readonly<Log>,
+  ): DeepReadonly<OSwapPoolState> | null {
+    if (!state.totalAssets || !state.totalShares) {
+      // If state doesn't have ERC4626 fields initialized, don't update
+      return null;
+    }
+
+    const assets = event.args.assets
+      ? BigInt(event.args.assets.toString())
+      : 0n;
+    const shares = event.args.shares
+      ? BigInt(event.args.shares.toString())
+      : 0n;
+
+    return {
+      ...state,
+      totalAssets: (BigInt(state.totalAssets) - assets).toString(),
+      totalShares: (BigInt(state.totalShares) - shares).toString(),
     };
   }
 }
