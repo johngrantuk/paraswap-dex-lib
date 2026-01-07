@@ -30,8 +30,10 @@ import {
 import { OSwapConfig, Adapters, OSWAP_GAS_COST } from './config';
 import { OSwapEventPool } from './oswap-pool';
 import OSwapABI from '../../abi/oswap/oswap.abi.json';
+import ERC4626ABI from '../../abi/ERC4626.json';
 import { extractReturnAmountPosition } from '../../executor/utils';
 import { applyTransferFee } from '../../lib/token-transfer-fee';
+import { uint256ToBigInt } from '../../lib/decoders';
 
 export class OSwap extends SimpleExchange implements IDex<OSwapData> {
   readonly eventPools: { [id: string]: OSwapEventPool } = {};
@@ -135,17 +137,53 @@ export class OSwap extends SimpleExchange implements IDex<OSwapData> {
     return pool ? [pool.id] : [];
   }
 
+  // Convert amount using pool-specific logic.
+  // For sUSDe-USDe pool, uses ERC4626 convertToAssets/convertToShares.
+  // For other pools, returns the amount as-is.
+  async convertAmount(
+    pool: OSwapPool,
+    from: Token,
+    amount: bigint,
+  ): Promise<bigint> {
+    if (pool.id === 'OSwap_0xceda2d856238aa0d12f6329de20b9115f07c366d') {
+      // token0 is USDe, token1 is sUSDe
+      const method =
+        from.address.toLowerCase() === pool.token0
+          ? 'convertToAssets'
+          : 'convertToShares';
+
+      const results = await this.dexHelper.multiWrapper.tryAggregate<bigint>(
+        true,
+        [
+          {
+            target: pool.token1,
+            callData: new Interface(ERC4626ABI).encodeFunctionData(method, [
+              amount.toString(),
+            ]),
+            decodeFunction: uint256ToBigInt,
+          },
+        ],
+      );
+
+      return results[0].returnData;
+    }
+
+    return amount;
+  }
+
   // Sell: Given "amount" of "from" token, how much of "to" token will be received by the trader.
   // Buy: Given "amount" of "dest" token, how much of "to" token is required from the trader.
   // Note: OSwap traderate is at precision 36.
-  calcPrice(
+  private async calcPrice(
     pool: OSwapPool,
     state: OSwapPoolState,
     from: Token,
     amount: bigint,
     side: SwapSide,
     checkLiquidity = true,
-  ): bigint {
+  ): Promise<bigint> {
+    const convertedAmount = await this.convertAmount(pool, from, amount);
+
     const rate =
       from.address.toLowerCase() === pool.token0
         ? BigInt(state.traderate0)
@@ -153,12 +191,12 @@ export class OSwap extends SimpleExchange implements IDex<OSwapData> {
 
     const price =
       side === SwapSide.SELL
-        ? (amount * rate) / getBigIntPow(36)
-        : (amount * getBigIntPow(36)) / rate + 3n;
+        ? (convertedAmount * rate) / getBigIntPow(36)
+        : (convertedAmount * getBigIntPow(36)) / rate + 3n;
 
     if (
       checkLiquidity &&
-      !this.hasEnoughLiquidity(pool, state, from, amount, price, side)
+      !this.hasEnoughLiquidity(pool, state, from, convertedAmount, price, side)
     ) {
       return 0n;
     }
@@ -233,7 +271,7 @@ export class OSwap extends SimpleExchange implements IDex<OSwapData> {
 
       // Calculate the prices
       const unitAmount = getBigIntPow(18);
-      const unitPrice = this.calcPrice(
+      const unitPrice = await this.calcPrice(
         pool,
         state,
         srcToken,
@@ -241,9 +279,12 @@ export class OSwap extends SimpleExchange implements IDex<OSwapData> {
         side,
         false,
       );
-      const prices = amounts.map(amount =>
-        this.calcPrice(pool, state, srcToken, amount, side),
-      );
+
+      let prices: bigint[] = [];
+      for (const amount of amounts) {
+        const p = await this.calcPrice(pool, state, srcToken, amount, side);
+        prices.push(p);
+      }
 
       const [unitPriceWithFee, ...pricesWithFee] = applyTransferFee(
         [unitPrice, ...prices],
