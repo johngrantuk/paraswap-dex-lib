@@ -53,17 +53,17 @@ describe('Oswap EventPool Mainnet', function () {
       RedeemRequested: [22317636, 22280283, 22277504, 22255426, 22250671],
       RedeemClaimed: [22317698, 22302249, 22255494, 22250723, 22217971],
     },
-    // USDe-sUSDe pool - TODO: Update with actual event block numbers
+    // USDe-sUSDe pool
     '0xceda2d856238aa0d12f6329de20b9115f07c366d': {
-      TraderateChanged: [],
-      Transfer: [],
+      TraderateChanged: [24121758, 24114342],
+      Transfer: [24184380, 24183262],
       RedeemRequested: [],
       RedeemClaimed: [],
     },
-    // WETH-eETH pool - TODO: Update with actual event block numbers
+    // WETH-eETH pool
     '0xfb0a3cf9b019bfd8827443d131b235b3e0fc58d2': {
-      TraderateChanged: [],
-      Transfer: [],
+      TraderateChanged: [24185411, 24184817],
+      Transfer: [24185198, 24185193],
       RedeemRequested: [],
       RedeemClaimed: [],
     },
