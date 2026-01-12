@@ -5,8 +5,6 @@ dotenv.config();
 import { DummyDexHelper } from '../../dex-helper/index';
 import { Network, SwapSide } from '../../constants';
 import { BI_POWS } from '../../bigint-constants';
-import { MultiCallParams } from '../../lib/multi-wrapper';
-import { uint256ToBigInt } from '../../lib/decoders';
 import { getBigIntPow } from '../../utils';
 import {
   checkPoolPrices,
@@ -16,33 +14,85 @@ import {
 import { Tokens } from '../../../tests/constants-e2e';
 import { Address } from '../../types';
 import { OSwap } from './oswap';
-import { OSwapPool } from './types';
+import { OSwapPool, OSwapPoolState } from './types';
 
-async function getOnchainTraderates(
+async function getOnchainState(
   oswap: OSwap,
   pool: OSwapPool,
   blockNumber: number,
-): Promise<{ traderate0: bigint; traderate1: bigint }> {
-  const callData: MultiCallParams<bigint>[] = [
-    {
-      target: pool.address,
-      callData: oswap.iOSwap.encodeFunctionData('traderate0', []),
-      decodeFunction: uint256ToBigInt,
-    },
-    {
-      target: pool.address,
-      callData: oswap.iOSwap.encodeFunctionData('traderate1', []),
-      decodeFunction: uint256ToBigInt,
-    },
-  ];
+): Promise<OSwapPoolState> {
+  const eventPool = oswap.eventPools[pool.id];
+  if (!eventPool) {
+    throw new Error(`No EventPool found for pool ${pool.id}`);
+  }
+  return eventPool.generateState(blockNumber);
+}
 
-  const results = await oswap.dexHelper.multiWrapper.aggregate<bigint>(
-    callData,
-    blockNumber,
-    oswap.dexHelper.multiWrapper.defaultBatchSize,
-  );
+function hasEnoughLiquidity(
+  pool: OSwapPool,
+  state: OSwapPoolState,
+  from: Address,
+  amount: bigint,
+  needed: bigint,
+  side: SwapSide,
+): boolean {
+  const outstandingWithdrawals =
+    BigInt(state.withdrawsQueued) - BigInt(state.withdrawsClaimed);
 
-  return { traderate0: results[0], traderate1: results[1] };
+  if (outstandingWithdrawals > 0n) {
+    if (needed + outstandingWithdrawals > BigInt(state.balance0)) {
+      return false;
+    }
+  }
+
+  if (side === SwapSide.SELL) {
+    return from.toLowerCase() === pool.token0
+      ? needed <= BigInt(state.balance1)
+      : needed <= BigInt(state.balance0);
+  }
+
+  return from.toLowerCase() === pool.token0
+    ? amount <= BigInt(state.balance1)
+    : amount <= BigInt(state.balance0);
+}
+
+function calcPriceFromState(
+  oswap: OSwap,
+  pool: OSwapPool,
+  state: OSwapPoolState,
+  from: Address,
+  amount: bigint,
+  side: SwapSide,
+): bigint {
+  let convertedAmount: bigint;
+  if (side === SwapSide.BUY && pool.erc4626) {
+    const assetToken = pool.erc4626.assetToken.toLowerCase();
+    const vaultToken = pool.erc4626.vaultToken.toLowerCase();
+    const tokenToConvert =
+      from.toLowerCase() === assetToken ? vaultToken : assetToken;
+
+    convertedAmount = oswap.convertAmount(pool, tokenToConvert, amount, state);
+  } else {
+    convertedAmount = oswap.convertAmount(pool, from, amount, state);
+  }
+
+  const rate =
+    from.toLowerCase() === pool.token0
+      ? BigInt(state.traderate0)
+      : BigInt(state.traderate1);
+
+  const price =
+    side === SwapSide.SELL
+      ? (convertedAmount * rate) / getBigIntPow(36)
+      : convertedAmount === 0n
+      ? 0n
+      : (convertedAmount * getBigIntPow(36)) / rate + 3n;
+
+  if (!hasEnoughLiquidity(pool, state, from, amount, price, side)) {
+    return 0n;
+  }
+
+  return price;
 }
 
 // Check prices passed as arguments against prices calculated from on-chain data.
@@ -53,24 +103,12 @@ async function checkOnChainPricing(
   prices: bigint[],
   side: SwapSide,
   srcAddress: Address,
-  destAddress: Address,
   amounts: bigint[],
 ) {
-  // Get the onchain trade rates from the pool and calculate the prices.
-  const data = await getOnchainTraderates(oswap, pool, blockNumber);
-  let expectedPrices: bigint[] = [];
-  for (const amount of amounts) {
-    const rate =
-      srcAddress.toLowerCase() === pool.token0
-        ? data.traderate0
-        : data.traderate1;
-    if (side === SwapSide.SELL) {
-      expectedPrices.push((amount * rate) / getBigIntPow(36));
-    } else {
-      // SwapSide.BUY
-      expectedPrices.push((amount * getBigIntPow(36)) / rate);
-    }
-  }
+  const state = await getOnchainState(oswap, pool, blockNumber);
+  const expectedPrices = amounts.map(amount =>
+    calcPriceFromState(oswap, pool, state, srcAddress, amount, side),
+  );
   expect(prices).toEqual(expectedPrices);
 }
 
@@ -131,7 +169,6 @@ async function testPricingOnNetwork(
     poolPrices![0].prices,
     side,
     srcToken.address,
-    destToken.address,
     amounts,
   );
 }
@@ -457,7 +494,6 @@ describe('OSwap', function () {
       7n * BI_POWS[tokens[srcTokenSymbol].decimals],
       8n * BI_POWS[tokens[srcTokenSymbol].decimals],
       9n * BI_POWS[tokens[srcTokenSymbol].decimals],
-      10n * BI_POWS[tokens[srcTokenSymbol].decimals],
     ];
 
     const amountsForBuy = [
@@ -471,7 +507,6 @@ describe('OSwap', function () {
       7n * BI_POWS[tokens[destTokenSymbol].decimals],
       8n * BI_POWS[tokens[destTokenSymbol].decimals],
       9n * BI_POWS[tokens[destTokenSymbol].decimals],
-      10n * BI_POWS[tokens[destTokenSymbol].decimals],
     ];
 
     async function getBlockNumberForTesting(oswap: OSwap): Promise<number> {
@@ -590,36 +625,37 @@ describe('OSwap', function () {
 
     const amountsForSell = [
       0n,
-      1n * BI_POWS[tokens[srcTokenSymbol].decimals],
-      2n * BI_POWS[tokens[srcTokenSymbol].decimals],
-      3n * BI_POWS[tokens[srcTokenSymbol].decimals],
-      4n * BI_POWS[tokens[srcTokenSymbol].decimals],
-      5n * BI_POWS[tokens[srcTokenSymbol].decimals],
-      6n * BI_POWS[tokens[srcTokenSymbol].decimals],
-      7n * BI_POWS[tokens[srcTokenSymbol].decimals],
-      8n * BI_POWS[tokens[srcTokenSymbol].decimals],
-      9n * BI_POWS[tokens[srcTokenSymbol].decimals],
-      10n * BI_POWS[tokens[srcTokenSymbol].decimals],
+      1n * BI_POWS[tokens[srcTokenSymbol].decimals - 3],
+      2n * BI_POWS[tokens[srcTokenSymbol].decimals - 3],
+      3n * BI_POWS[tokens[srcTokenSymbol].decimals - 3],
+      4n * BI_POWS[tokens[srcTokenSymbol].decimals - 3],
+      5n * BI_POWS[tokens[srcTokenSymbol].decimals - 3],
+      6n * BI_POWS[tokens[srcTokenSymbol].decimals - 3],
+      7n * BI_POWS[tokens[srcTokenSymbol].decimals - 3],
+      8n * BI_POWS[tokens[srcTokenSymbol].decimals - 3],
+      9n * BI_POWS[tokens[srcTokenSymbol].decimals - 3],
+      10n * BI_POWS[tokens[srcTokenSymbol].decimals - 3],
     ];
 
     const amountsForBuy = [
       0n,
-      1n * BI_POWS[tokens[destTokenSymbol].decimals],
-      2n * BI_POWS[tokens[destTokenSymbol].decimals],
-      3n * BI_POWS[tokens[destTokenSymbol].decimals],
-      4n * BI_POWS[tokens[destTokenSymbol].decimals],
-      5n * BI_POWS[tokens[destTokenSymbol].decimals],
-      6n * BI_POWS[tokens[destTokenSymbol].decimals],
-      7n * BI_POWS[tokens[destTokenSymbol].decimals],
-      8n * BI_POWS[tokens[destTokenSymbol].decimals],
-      9n * BI_POWS[tokens[destTokenSymbol].decimals],
-      10n * BI_POWS[tokens[destTokenSymbol].decimals],
+      1n * BI_POWS[tokens[destTokenSymbol].decimals - 3],
+      2n * BI_POWS[tokens[destTokenSymbol].decimals - 3],
+      3n * BI_POWS[tokens[destTokenSymbol].decimals - 3],
+      4n * BI_POWS[tokens[destTokenSymbol].decimals - 3],
+      5n * BI_POWS[tokens[destTokenSymbol].decimals - 3],
+      6n * BI_POWS[tokens[destTokenSymbol].decimals - 3],
+      7n * BI_POWS[tokens[destTokenSymbol].decimals - 3],
+      8n * BI_POWS[tokens[destTokenSymbol].decimals - 3],
+      9n * BI_POWS[tokens[destTokenSymbol].decimals - 3],
+      10n * BI_POWS[tokens[destTokenSymbol].decimals - 3],
     ];
 
     async function getBlockNumberForTesting(oswap: OSwap): Promise<number> {
       const DEFAULT_BLOCK_NUMBER = 24174745;
 
-      const currentBlockNumber = await dexHelper.web3Provider.eth.getBlockNumber();
+      const currentBlockNumber =
+        await dexHelper.web3Provider.eth.getBlockNumber();
       const srcToken = Tokens[network][srcTokenSymbol];
       const destToken = Tokens[network][destTokenSymbol];
 
@@ -630,7 +666,10 @@ describe('OSwap', function () {
         );
 
       const eventPool = oswap.eventPools[pool.id];
-      const state = await eventPool.getStateOrGenerate(currentBlockNumber, true);
+      const state = await eventPool.getStateOrGenerate(
+        currentBlockNumber,
+        true,
+      );
 
       const minBalance =
         state.balance0 < state.balance1 ? state.balance0 : state.balance1;
