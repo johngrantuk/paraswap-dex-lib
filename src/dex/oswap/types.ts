@@ -14,6 +14,11 @@ export type OSwapPoolState = {
   totalShares?: string;
 };
 
+export type OSwapERC4626Config = {
+  assetToken: Address;
+  vaultToken: Address;
+};
+
 // OSwapPoolState is the state of the event subscriber. It is the minimum
 // set of parameters required to compute pool prices.
 export type OSwapData = {
@@ -27,6 +32,7 @@ export type OSwapPool = {
   address: Address;
   token0: Address;
   token1: Address;
+  erc4626?: OSwapERC4626Config;
 };
 
 export type DexParams = {

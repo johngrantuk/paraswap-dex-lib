@@ -30,11 +30,9 @@ import {
 import { OSwapConfig, Adapters, OSWAP_GAS_COST } from './config';
 import { OSwapEventPool } from './oswap-pool';
 import OSwapABI from '../../abi/oswap/oswap.abi.json';
-import ERC4626ABI from '../../abi/ERC4626.json';
 import { extractReturnAmountPosition } from '../../executor/utils';
 import { applyTransferFee } from '../../lib/token-transfer-fee';
 import { uint256ToBigInt } from '../../lib/decoders';
-import { isSusdeUsdePool } from './utils';
 
 export class OSwap extends SimpleExchange implements IDex<OSwapData> {
   readonly eventPools: { [id: string]: OSwapEventPool } = {};
@@ -139,17 +137,18 @@ export class OSwap extends SimpleExchange implements IDex<OSwapData> {
   }
 
   // Convert amount using pool-specific logic.
-  // For sUSDe-USDe pool, uses ERC4626 convertToAssets/convertToShares calculated locally.
+  // For ERC4626 pools, uses convertToAssets/convertToShares calculated locally.
   // For other pools, returns the amount as-is.
   convertAmount(
     pool: OSwapPool,
-    from: Token,
+    from: Address,
     amount: bigint,
     state: OSwapPoolState,
   ): bigint {
-    if (isSusdeUsdePool(pool.id)) {
-      // token0 is USDe (liquidityAsset), token1 is sUSDe (baseAsset, ERC4626 vault)
-      // Use ERC4626 conversion formula matching Solidity _convert function
+    const erc4626 = pool.erc4626;
+
+    if (erc4626) {
+      // Use ERC4626 conversion formula matching Solidity _convert function.
       if (!state.totalAssets || !state.totalShares) {
         this.logger.error(
           `convertAmount: Missing ERC4626 state for pool ${pool.id}`,
@@ -164,18 +163,22 @@ export class OSwap extends SimpleExchange implements IDex<OSwapData> {
         return 0n;
       }
 
-      const fromAddress = from.address.toLowerCase();
-      const isFromUsde = fromAddress === pool.token0.toLowerCase();
+      const fromAddress = from.toLowerCase();
+      const isFromAsset = fromAddress === erc4626.assetToken.toLowerCase();
+      const isFromVault = fromAddress === erc4626.vaultToken.toLowerCase();
 
-      if (isFromUsde) {
-        // Converting from USDe (liquidityAsset) to sUSDe (baseAsset): convertToShares
-        // Matches: if (token == liquidityAsset) return susde.convertToShares(amount)
-        return (amount * totalShares) / totalAssets;
-      } else {
-        // Converting from sUSDe (baseAsset) to USDe (liquidityAsset): convertToAssets
-        // Matches: if (token == baseAsset) return susde.convertToAssets(amount)
-        return (amount * totalAssets) / totalShares;
+      if (!isFromAsset && !isFromVault) {
+        this.logger.error(
+          `convertAmount: Token ${from} not in ERC4626 pool ${pool.id}`,
+        );
+        return 0n;
       }
+
+      if (isFromAsset) {
+        return (amount * totalShares) / totalAssets;
+      }
+
+      return (amount * totalAssets) / totalShares;
     }
 
     return amount;
@@ -196,23 +199,19 @@ export class OSwap extends SimpleExchange implements IDex<OSwapData> {
     // based on the destination token direction, not the source token.
     // For SELL side, amount represents the source token amount, so we convert based on from.
     let convertedAmount: bigint;
-    if (side === SwapSide.BUY && isSusdeUsdePool(pool.id)) {
-      // For BUY side on sUSDe-USDe pool, amount is destToken amount
-      // We need to convert the opposite direction: if from is USDe, amount is sUSDe, so convert sUSDe->USDe
+    if (side === SwapSide.BUY && pool.erc4626) {
+      // For BUY side on ERC4626 pools, amount is destToken amount.
+      // Convert the opposite direction to keep pricing in the source units.
       const fromAddress = from.address.toLowerCase();
-      const isFromUsde = fromAddress === pool.token0.toLowerCase();
-      // For BUY: if from is USDe, dest is sUSDe, so we convert sUSDe amount
-      // if from is sUSDe, dest is USDe, so we convert USDe amount
-      const tokenToConvert = isFromUsde ? pool.token1 : pool.token0;
-      convertedAmount = this.convertAmount(
-        pool,
-        { address: tokenToConvert, decimals: 18 } as Token,
-        amount,
-        state,
-      );
+      const assetToken = pool.erc4626.assetToken.toLowerCase();
+      const vaultToken = pool.erc4626.vaultToken.toLowerCase();
+
+      const tokenToConvert =
+        fromAddress === assetToken ? vaultToken : assetToken;
+      convertedAmount = this.convertAmount(pool, tokenToConvert, amount, state);
     } else {
       // For SELL side, amount is from token, convert normally
-      convertedAmount = this.convertAmount(pool, from, amount, state);
+      convertedAmount = this.convertAmount(pool, from.address, amount, state);
     }
 
     const rate =
@@ -220,14 +219,21 @@ export class OSwap extends SimpleExchange implements IDex<OSwapData> {
         ? BigInt(state.traderate0)
         : BigInt(state.traderate1);
 
-    const price =
-      side === SwapSide.SELL
-        ? (convertedAmount * rate) / getBigIntPow(36)
-        : (convertedAmount * getBigIntPow(36)) / rate + 3n;
+    let price: bigint;
+
+    if (side === SwapSide.SELL) {
+      price = (convertedAmount * rate) / getBigIntPow(36);
+    } else {
+      if (convertedAmount === 0n) {
+        price = 0n;
+      } else {
+        price = (convertedAmount * getBigIntPow(36)) / rate + 3n;
+      }
+    }
 
     if (
       checkLiquidity &&
-      !this.hasEnoughLiquidity(pool, state, from, convertedAmount, price, side)
+      !this.hasEnoughLiquidity(pool, state, from, amount, price, side)
     ) {
       return 0n;
     }

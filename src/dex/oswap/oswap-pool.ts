@@ -10,7 +10,6 @@ import { OSwapPool, OSwapPoolState } from './types';
 import OSwapABI from '../../abi/oswap/oswap.abi.json';
 import ERC20ABI from '../../abi/ERC20.abi.json';
 import ERC4626ABI from '../../abi/ERC4626.json';
-import { isSusdeUsdePool } from './utils';
 
 export class OSwapEventPool extends StatefulEventSubscriber<OSwapPoolState> {
   handlers: {
@@ -45,7 +44,7 @@ export class OSwapEventPool extends StatefulEventSubscriber<OSwapPoolState> {
     this.handlers['RedeemRequested'] = this.handleRedeemRequested.bind(this);
     this.handlers['RedeemClaimed'] = this.handleRedeemClaimed.bind(this);
 
-    if (isSusdeUsdePool(pool.id)) {
+    if (pool.erc4626) {
       this.handlers['Deposit'] = this.handleERC4626Deposit.bind(this);
       this.handlers['Withdraw'] = this.handleERC4626Withdraw.bind(this);
     }
@@ -56,10 +55,11 @@ export class OSwapEventPool extends StatefulEventSubscriber<OSwapPoolState> {
       return this.iOSwap.parseLog(log);
     }
 
-    // Check if this is an ERC4626 event from the sUSDe vault (token1 for sUSDe-USDe pool)    
+    const erc4626 = this.pool.erc4626;
+    // Check if this is an ERC4626 event from the configured vault token.
     if (
-      isSusdeUsdePool(this.pool.id) &&
-      log.address.toLowerCase() === this.pool.token1.toLowerCase()
+      erc4626 &&
+      log.address.toLowerCase() === erc4626.vaultToken.toLowerCase()
     ) {
       try {
         return this.iERC4626.parseLog(log);
@@ -144,17 +144,17 @@ export class OSwapEventPool extends StatefulEventSubscriber<OSwapPoolState> {
       },
     ];
 
-    // For sUSDe-USDe pool, also fetch ERC4626 vault state
-    if (isSusdeUsdePool(this.pool.id)) {
+    // For ERC4626 pools, also fetch vault state
+    if (this.pool.erc4626) {
       callData.push(
         {
-          target: this.pool.token1, // sUSDe vault address
+          target: this.pool.erc4626.vaultToken,
           callData: this.iERC4626.encodeFunctionData('totalAssets', []),
           decodeFunction: uint256ToBigInt,
         },
         {
-          target: this.pool.token1, // sUSDe vault address
-          callData: this.iERC4626.encodeFunctionData('totalSupply', []), // totalShares for ERC4626
+          target: this.pool.erc4626.vaultToken,
+          callData: this.iERC4626.encodeFunctionData('totalSupply', []),
           decodeFunction: uint256ToBigInt,
         },
       );
@@ -184,8 +184,8 @@ export class OSwapEventPool extends StatefulEventSubscriber<OSwapPoolState> {
       withdrawsClaimed: withdrawsClaimed.toString(),
     };
 
-    // Add ERC4626 state if this is the sUSDe-USDe pool
-    if (isSusdeUsdePool(this.pool.id) && results.length >= 8) {
+    // Add ERC4626 state if configured
+    if (this.pool.erc4626 && results.length >= 8) {
       baseState.totalAssets = results[6].toString();
       baseState.totalShares = results[7].toString();
     }
@@ -223,7 +223,7 @@ export class OSwapEventPool extends StatefulEventSubscriber<OSwapPoolState> {
   /**
    * Process the transfer events for tokens in/out of the pool
    * to keep the state's token balances up to date.
-   * Also handles ERC4626 asset transfers to vault for sUSDe-USDe pool.
+   * Also handles ERC4626 asset transfers to vault for ERC4626 pools.
    */
   handleTransfer(
     event: any,
@@ -238,13 +238,17 @@ export class OSwapEventPool extends StatefulEventSubscriber<OSwapPoolState> {
     const toAddress = event.args.to.toLowerCase();
     const amount = event.args.value.toBigInt();
 
-    // Check if this is an ERC4626 asset transfer to vault (for sUSDe-USDe pool)
+    const erc4626 = this.pool.erc4626;
+    const assetToken = erc4626?.assetToken.toLowerCase();
+    const vaultToken = erc4626?.vaultToken.toLowerCase();
+
+    // Check if this is an ERC4626 asset transfer to vault
     // Note: We need to update totalAssets AND balance if the transfer is from/to the pool
     let updatedTotalAssets: string | undefined = undefined;
     if (
-      isSusdeUsdePool(this.pool.id) &&
-      tokenAddress === this.pool.token0.toLowerCase() && // USDe (underlying asset)
-      toAddress === this.pool.token1.toLowerCase() && // sUSDe vault
+      erc4626 &&
+      tokenAddress === assetToken &&
+      toAddress === vaultToken &&
       state.totalAssets
     ) {
       // Asset transfer to vault increases totalAssets
@@ -307,7 +311,7 @@ export class OSwapEventPool extends StatefulEventSubscriber<OSwapPoolState> {
   }
 
   /**
-   * Handle ERC4626 Deposit event from sUSDe vault.
+   * Handle ERC4626 Deposit event from vault.
    * Updates totalShares when assets are deposited.
    */
   handleERC4626Deposit(
@@ -331,7 +335,7 @@ export class OSwapEventPool extends StatefulEventSubscriber<OSwapPoolState> {
   }
 
   /**
-   * Handle ERC4626 Withdraw event from sUSDe vault.
+   * Handle ERC4626 Withdraw event from vault.
    * Updates both totalAssets and totalShares when assets are withdrawn.
    */
   handleERC4626Withdraw(
