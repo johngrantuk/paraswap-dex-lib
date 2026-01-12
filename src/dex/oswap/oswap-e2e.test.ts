@@ -114,8 +114,8 @@ describe('Oswap E2E', () => {
     const tokenASymbol: string = 'WETH';
     const tokenBSymbol: string = 'eETH';
 
-    const tokenAAmount: string = '1000000000000000000';
-    const tokenBAmount: string = '1000000000000000000';
+    const tokenAAmount: string = '10000000000000000';
+    const tokenBAmount: string = '10000000000000000';
 
     testForNetwork(
       network,
