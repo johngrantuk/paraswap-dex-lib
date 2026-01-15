@@ -5,27 +5,7 @@ import { Network, SwapSide } from '../../constants';
 export const AngleStakedStableConfig: DexConfigMap<DexParams> = {
   // USDA <-> stUSD
   AngleStakedStableUSD: {
-    [Network.ARBITRUM]: {
-      agToken: '0x0000206329b97db379d5e1bf586bbdb969c63274',
-      stakeToken: '0x0022228a2cc5e7ef0274a7baa600d44da5ab5776',
-    },
     [Network.MAINNET]: {
-      agToken: '0x0000206329b97db379d5e1bf586bbdb969c63274',
-      stakeToken: '0x0022228a2cc5e7ef0274a7baa600d44da5ab5776',
-    },
-    [Network.OPTIMISM]: {
-      agToken: '0x0000206329b97db379d5e1bf586bbdb969c63274',
-      stakeToken: '0x0022228a2cc5e7ef0274a7baa600d44da5ab5776',
-    },
-    [Network.POLYGON]: {
-      agToken: '0x0000206329b97db379d5e1bf586bbdb969c63274',
-      stakeToken: '0x0022228a2cc5e7ef0274a7baa600d44da5ab5776',
-    },
-    [Network.BASE]: {
-      agToken: '0x0000206329b97db379d5e1bf586bbdb969c63274',
-      stakeToken: '0x0022228a2cc5e7ef0274a7baa600d44da5ab5776',
-    },
-    [Network.BSC]: {
       agToken: '0x0000206329b97db379d5e1bf586bbdb969c63274',
       stakeToken: '0x0022228a2cc5e7ef0274a7baa600d44da5ab5776',
     },
