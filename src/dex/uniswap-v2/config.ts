@@ -334,12 +334,4 @@ export const UniswapV2Config: DexConfigMap<DexParams> = {
       feeCode: 16,
     },
   },
-  RocketSwap: {
-    [Network.BASE]: {
-      factoryAddress: '0x1b8128c3a1b7d20053d10763ff02466ca7ff99fc',
-      initCode: '0x', // deprecated
-      poolGasCost: 90 * 1000,
-      feeCode: 30,
-    },
-  },
 };
