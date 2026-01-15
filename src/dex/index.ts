@@ -77,7 +77,6 @@ import { AaveV3StataV2 } from './aave-v3-stata-v2/aave-v3-stata-v2';
 import { OSwap } from './oswap/oswap';
 import { FluidDex } from './fluid-dex/fluid-dex';
 import { FluidDexLite } from './fluid-dex-lite/fluid-dex-lite';
-import { ConcentratorArusd } from './concentrator-arusd/concentrator-arusd';
 import { FxProtocolRusd } from './fx-protocol-rusd/fx-protocol-rusd';
 import { AaveGsm } from './aave-gsm/aave-gsm';
 import { LitePsm } from './lite-psm/lite-psm';
@@ -182,7 +181,6 @@ const Dexes = [
   AaveV3Stata,
   AaveV3StataV2,
   OSwap,
-  ConcentratorArusd,
   FxProtocolRusd,
   AaveGsm,
   LitePsm,
