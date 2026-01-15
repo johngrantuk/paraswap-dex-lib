@@ -59,7 +59,6 @@ import { TraderJoeV21 } from './trader-joe-v2.1/trader-joe-v2.1';
 import { TraderJoeV22 } from './trader-joe-v2.1/trader-joe-v2.2';
 import { PancakeswapV3 } from './pancakeswap-v3/pancakeswap-v3';
 import { Algebra } from './algebra/algebra';
-import { AngleTransmuter } from './angle-transmuter/angle-transmuter';
 import { AngleStakedStable } from './angle-staked-stable/angle-staked-stable';
 import { Dexalot } from './dexalot/dexalot';
 import { Bebop } from './bebop/bebop';
@@ -169,7 +168,6 @@ const Dexes = [
   MaverickV2,
   Camelot,
   SwaapV2,
-  AngleTransmuter,
   AngleStakedStable,
   SolidlyV3,
   Wombat,
