@@ -12,20 +12,8 @@ export const AngleStakedStableConfig: DexConfigMap<DexParams> = {
   },
   // EURA <-> stEUR
   AngleStakedStableEUR: {
-    [Network.ARBITRUM]: {
-      agToken: '0xfa5ed56a203466cbbc2430a43c66b9d8723528e7',
-      stakeToken: '0x004626a008b1acdc4c74ab51644093b155e59a23',
-    },
     [Network.MAINNET]: {
       agToken: '0x1a7e4e63778b4f12a199c062f3efdd288afcbce8',
-      stakeToken: '0x004626a008b1acdc4c74ab51644093b155e59a23',
-    },
-    [Network.OPTIMISM]: {
-      agToken: '0x9485aca5bbbe1667ad97c7fe7c4531a624c8b1ed',
-      stakeToken: '0x004626a008b1acdc4c74ab51644093b155e59a23',
-    },
-    [Network.POLYGON]: {
-      agToken: '0xe0b52e49357fd4daf2c15e02058dce6bc0057db4',
       stakeToken: '0x004626a008b1acdc4c74ab51644093b155e59a23',
     },
   },
