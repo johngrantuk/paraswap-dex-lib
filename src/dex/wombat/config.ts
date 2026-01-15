@@ -7,9 +7,6 @@ export const WombatConfig: DexConfigMap<DexParams> = {
     [Network.BSC]: {
       bmwAddress: '0x489833311676B566f888119c29bd997Dc6C95830',
     },
-    [Network.ARBITRUM]: {
-      bmwAddress: '0x62A83C6791A3d7950D823BB71a38e47252b6b6F4',
-    },
     [Network.AVALANCHE]: {
       bmwAddress: '0x6521a549834F5E6d253CD2e5F4fbe4048f86cd7b',
     },
