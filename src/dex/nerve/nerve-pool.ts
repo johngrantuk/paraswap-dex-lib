@@ -63,10 +63,6 @@ export class NerveEventPool extends StatefulEventSubscriber<PoolState> {
     this.handlers['RampA'] = this.handleRampA.bind(this);
     this.handlers['StopRampA'] = this.handleStopRampA.bind(this);
 
-    // IronV2 events support
-    this.handlers['TokenExchange'] = this.handleTokenExchange.bind(this);
-    this.handlers['NewFee'] = this.handleNewFee.bind(this);
-
     this.poolIface = new Interface(JSON.stringify(this.poolABI));
     this.lpTokenIface = new Interface(JSON.stringify(erc20ABI));
 
@@ -177,11 +173,9 @@ export class NerveEventPool extends StatefulEventSubscriber<PoolState> {
       futureA: bigIntify(swapStorage.futureA._hex),
       initialATime: bigIntify(swapStorage.initialATime._hex),
       futureATime: bigIntify(swapStorage.futureATime._hex),
-      // If we have swapFee or fee, use these values, otherwise set to zero
+      // If we have swapFee, use this value, otherwise set to zero
       swapFee:
-        ((swapStorage.swapFee || swapStorage.fee) &&
-          bigIntify((swapStorage.swapFee || swapStorage.fee)._hex)) ||
-        0n,
+        (swapStorage.swapFee && bigIntify(swapStorage.swapFee._hex)) || 0n,
       adminFee: bigIntify(swapStorage.adminFee._hex),
       defaultDepositFee:
         swapStorage.defaultDepositFee &&
@@ -195,16 +189,6 @@ export class NerveEventPool extends StatefulEventSubscriber<PoolState> {
       isValid: true,
       paused: paused[0],
     };
-  }
-
-  handleNewFee(event: any, state: PoolState) {
-    if (!state.isValid) return state;
-
-    state.swapFee = bigIntify(event.args.fee);
-    state.adminFee = bigIntify(event.args.adminFee);
-    state.defaultWithdrawFee = bigIntify(event.args.withdrawFee);
-
-    return state;
   }
 
   handleNewAdminFee(event: any, state: PoolState) {
@@ -248,9 +232,8 @@ export class NerveEventPool extends StatefulEventSubscriber<PoolState> {
   handleStopRampA(event: any, state: PoolState) {
     if (!state.isValid) return state;
 
-    // To support IronV2 variable names I use "or" expression
-    const finalA = bigIntify(event.args.currentA || event.args.A);
-    const finalTime = bigIntify(event.args.time || event.args.timestamp);
+    const finalA = bigIntify(event.args.currentA);
+    const finalTime = bigIntify(event.args.time);
 
     state.initialA = finalA;
     state.futureA = finalA;
@@ -303,71 +286,14 @@ export class NerveEventPool extends StatefulEventSubscriber<PoolState> {
     return state;
   }
 
-  // Variation for IronV2. Almost the same as handleTokenSwap
-  handleTokenExchange(
-    event: any,
-    state: PoolState,
-    _2: Log,
-    blockHeader: BlockHeader,
-  ) {
-    if (!state.isValid) return state;
-    const blockTimestamp = bigIntify(blockHeader.timestamp);
-
-    const transferredDx = bigIntify(event.args.tokensSold);
-    const dyEvent = bigIntify(event.args.tokensBought);
-    const i = event.args.soldId.toNumber();
-    const j = event.args.boughtId.toNumber();
-
-    const normalizedBalances = this.math._xp(state);
-    const x =
-      normalizedBalances[i] + transferredDx * this.tokenPrecisionMultipliers[i];
-
-    try {
-      const y = this.math._getY(
-        state,
-        i,
-        j,
-        x,
-        normalizedBalances,
-        blockTimestamp,
-      );
-      let dy = normalizedBalances[j] - y - 1n;
-      const dy_fee = (dy * state.swapFee) / this.math.FEE_DENOMINATOR;
-      dy = (dy - dy_fee) / this.tokenPrecisionMultipliers[j];
-      const _adminFee =
-        (dy_fee * state.adminFee) /
-        this.math.FEE_DENOMINATOR /
-        this.tokenPrecisionMultipliers[j];
-
-      state.balances[i] += transferredDx;
-      state.balances[j] -= dy + _adminFee;
-
-      if (dyEvent !== dy) {
-        this.logger.error(
-          `For ${this.parentName}_${this.poolConfig.name} _calculateSwap value ${dy} is not equal to ${dyEvent} event value`,
-        );
-        state.isValid = false;
-      }
-    } catch (e) {
-      state.isValid = false;
-    }
-    return state;
-  }
-
   handleAddLiquidity(event: any, state: PoolState) {
     if (!state.isValid) return state;
 
     const tokenAmounts = event.args.tokenAmounts.map(bigIntify) as bigint[];
     const fees = event.args.fees.map(bigIntify) as bigint[];
-    const lpTokenSupply = bigIntify(
-      event.args.lpTokenSupply || event.args.tokenSupply,
-    );
+    const lpTokenSupply = bigIntify(event.args.lpTokenSupply);
 
-    // Original Nerve emits total supply, but IronV2 the difference between supplies
-    state.lpToken_supply =
-      event.args.lpTokenSupply !== undefined
-        ? lpTokenSupply
-        : state.lpToken_supply + lpTokenSupply;
+    state.lpToken_supply = lpTokenSupply;
 
     for (const [i, tokenAmount] of tokenAmounts.entries()) {
       // We receive the real transferred amount. No need to check it
@@ -382,9 +308,7 @@ export class NerveEventPool extends StatefulEventSubscriber<PoolState> {
     if (!state.isValid) return state;
 
     const tokenAmounts = event.args.tokenAmounts.map(bigIntify) as bigint[];
-    const lpTokenSupply = bigIntify(
-      event.args.lpTokenSupply || event.args.tokenSupply,
-    );
+    const lpTokenSupply = bigIntify(event.args.lpTokenSupply);
 
     state.lpToken_supply = lpTokenSupply;
     for (const [i, tokenAmount] of tokenAmounts.entries()) {
@@ -409,9 +333,7 @@ export class NerveEventPool extends StatefulEventSubscriber<PoolState> {
 
     const tokenAmounts = event.args.tokenAmounts.map(bigIntify) as bigint[];
     const fees = event.args.fees.map(bigIntify) as bigint[];
-    const lpTokenSupply = bigIntify(
-      event.args.lpTokenSupply || event.args.tokenSupply,
-    );
+    const lpTokenSupply = bigIntify(event.args.lpTokenSupply);
 
     state.lpToken_supply = lpTokenSupply;
     for (const [i, tokenAmount] of tokenAmounts.entries()) {

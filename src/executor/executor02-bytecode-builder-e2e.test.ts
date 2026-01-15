@@ -1199,7 +1199,6 @@ describe('Executor02ByteCodeBuilder e2e tests', () => {
           'DODOV2',
           'UniswapV3',
           'QuickSwapV3',
-          'IronV2',
           'Synapse',
         ];
 
