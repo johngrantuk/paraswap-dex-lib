@@ -9,6 +9,7 @@ import { LogDescription } from 'ethers/lib/utils';
 import { FactoryState, Pool } from './types';
 import { ETHER_ADDRESS, NULL_ADDRESS, SUBGRAPH_TIMEOUT } from '../../constants';
 import { MIN_USD_TVL_FOR_PRICING } from './constants';
+import { uint256ToBigInt } from '../../lib/decoders';
 
 /*
  * "Stateless" event subscriber in order to capture "PoolCreated" event on new pools created.
@@ -234,8 +235,6 @@ export class AlgebraIntegralFactory extends StatefulEventSubscriber<FactoryState
   async updatePoolsTvl(): Promise<void> {
     if (this.pools.length === 0) return;
 
-    const decodeBalance = (data: any): bigint => BigInt(data || 0);
-
     // Build multicall to fetch token balances for all pools
     const balanceCalls = this.pools.flatMap(pool => [
       {
@@ -243,14 +242,14 @@ export class AlgebraIntegralFactory extends StatefulEventSubscriber<FactoryState
         callData: this.erc20Interface.encodeFunctionData('balanceOf', [
           pool.poolAddress,
         ]),
-        decodeFunction: decodeBalance,
+        decodeFunction: uint256ToBigInt,
       },
       {
         target: pool.token1,
         callData: this.erc20Interface.encodeFunctionData('balanceOf', [
           pool.poolAddress,
         ]),
-        decodeFunction: decodeBalance,
+        decodeFunction: uint256ToBigInt,
       },
     ]);
 
