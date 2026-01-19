@@ -45,6 +45,7 @@ import {
   ALGEBRA_GAS_COST,
   ALGEBRA_QUOTE_GASLIMIT,
   ALGEBRA_EFFICIENCY_FACTOR,
+  POOL_TVL_UPDATE_INTERVAL,
 } from './constants';
 import { uint256ToBigInt } from '../../lib/decoders';
 
@@ -57,6 +58,7 @@ export class AlgebraIntegral
   readonly isFeeOnTransferSupported = true;
 
   private readonly factory: AlgebraIntegralFactory;
+  private updatePoolsTvlTimer?: NodeJS.Timeout;
 
   public static dexKeysWithNetwork: { key: string; networks: Network[] }[] =
     getDexKeysWithNetwork(AlgebraIntegralConfig);
@@ -86,6 +88,29 @@ export class AlgebraIntegral
 
   async initializePricing(blockNumber: number) {
     await this.factory.initialize(blockNumber);
+
+    // Set up TVL update timer (slave only)
+    if (!this.updatePoolsTvlTimer && this.dexHelper.config.isSlave) {
+      try {
+        await this.factory.updatePoolsTvl();
+      } catch (error) {
+        this.logger.error(
+          `${this.dexKey}: Failed to update pool TVL on initialize:`,
+          error,
+        );
+      }
+
+      this.updatePoolsTvlTimer = setInterval(async () => {
+        try {
+          await this.factory.updatePoolsTvl();
+        } catch (error) {
+          this.logger.error(
+            `${this.dexKey}: Failed to update pool TVL:`,
+            error,
+          );
+        }
+      }, POOL_TVL_UPDATE_INTERVAL * 1000);
+    }
   }
 
   getAdapters(side: SwapSide): { name: string; index: number }[] | null {
@@ -601,5 +626,13 @@ export class AlgebraIntegral
 
   private _getLoweredAddresses(srcToken: Token, destToken: Token) {
     return [srcToken.address.toLowerCase(), destToken.address.toLowerCase()];
+  }
+
+  releaseResources(): void {
+    if (this.updatePoolsTvlTimer) {
+      clearInterval(this.updatePoolsTvlTimer);
+      this.updatePoolsTvlTimer = undefined;
+      this.logger.info(`${this.dexKey}: cleared updatePoolsTvlTimer`);
+    }
   }
 }
