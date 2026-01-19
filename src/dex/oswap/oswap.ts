@@ -32,7 +32,6 @@ import { OSwapEventPool } from './oswap-pool';
 import OSwapABI from '../../abi/oswap/oswap.abi.json';
 import { extractReturnAmountPosition } from '../../executor/utils';
 import { applyTransferFee } from '../../lib/token-transfer-fee';
-import { uint256ToBigInt } from '../../lib/decoders';
 
 export class OSwap extends SimpleExchange implements IDex<OSwapData> {
   readonly eventPools: { [id: string]: OSwapEventPool } = {};
