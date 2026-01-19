@@ -14,7 +14,6 @@ import { uniswapMerge } from './uniswap-v2/optimizer';
 import { BiSwap } from './uniswap-v2/biswap';
 import { Bancor } from './bancor/bancor';
 import { Compound } from './compound/compound';
-import { AaveV2 } from './aave-v2/aave-v2';
 import { AaveV3 } from './aave-v3/aave-v3';
 import { DodoV1 } from './dodo-v1/dodo-v1';
 import { DodoV2 } from './dodo-v2';
@@ -135,7 +134,6 @@ const Dexes = [
   PancakeswapV3,
   VelodromeSlipstream,
   BiSwap,
-  AaveV2,
   AaveV3,
   Weth,
   PolygonMigrator,
