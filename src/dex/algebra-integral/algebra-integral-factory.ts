@@ -66,7 +66,6 @@ export class AlgebraIntegralFactory extends StatefulEventSubscriber<FactoryState
   public getAvailablePoolsForPair(
     srcToken: Address,
     destToken: Address,
-    blockNumber: number,
   ): Pool[] {
     const _srcToken = this.dexHelper.config.wrapETH(srcToken);
     const _destToken = this.dexHelper.config.wrapETH(destToken);
