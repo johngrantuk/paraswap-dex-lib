@@ -5,9 +5,9 @@ import { Tokens } from '../../../tests/constants-e2e';
 import { Network, SwapSide } from '../../constants';
 import { ContractMethodV6 } from '@paraswap/core';
 
-describe('TraderJoeV2.1 Gas Estimation', () => {
-  const dexKey = 'traderjoev2.1';
-  const network = Network.MAINNET;
+describe('TraderJoeV2.2 Gas Estimation', () => {
+  const dexKey = 'traderjoev2.2';
+  const network = Network.AVALANCHE;
 
   describe('swapExactAmountIn', () => {
     const USDT = Tokens[network]['USDT'];

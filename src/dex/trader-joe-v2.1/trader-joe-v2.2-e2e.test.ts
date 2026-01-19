@@ -12,7 +12,7 @@ import { ContractMethod, Network, SwapSide } from '../../constants';
 import { StaticJsonRpcProvider } from '@ethersproject/providers';
 import { generateConfig } from '../../config';
 
-const dexKey = 'traderjoev2.1';
+const dexKey = 'traderjoev2.2';
 
 const testForNetwork = (
   network: Network,
@@ -90,12 +90,12 @@ const testForNetwork = (
 
 // Ensure you have the E2E_ENDPOINT_URL env variable set.
 
-describe('TraderJoe v2.1 E2E', () => {
-  describe('Mainnet V6', () => {
+describe('TraderJoe v2.2 E2E', () => {
+  describe('Avalanche', () => {
     const swapMap = new Map<SwapSide, ContractMethod[]>([
       [SwapSide.SELL, [ContractMethod.swapExactAmountIn]],
     ]);
 
-    testForNetwork(Network.MAINNET, swapMap);
+    testForNetwork(Network.AVALANCHE, swapMap);
   });
 });
