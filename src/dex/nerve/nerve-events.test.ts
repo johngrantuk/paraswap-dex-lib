@@ -406,6 +406,309 @@ describe('Nerve Event Pool BSC', async () => {
   // No events for StopRampA
 });
 
+describe('IronV2 Event Pool Polygon', async () => {
+  const dexKey = 'IronV2';
+  const poolName = 'IS3USD_POLYGON';
+  const network = Network.POLYGON;
+  const testPoolAddress = '0x837503e8A8753ae17fB8C8151B8e6f586defCb57'; // IS3USD
+  const dexHelper = new DummyDexHelper(network);
+  const logger = dexHelper.getLogger(dexKey);
+  let nervePool: NerveEventPool;
+
+  beforeEach(async () => {
+    nervePool = new NerveEventPool(
+      dexKey,
+      network,
+      dexHelper,
+      logger,
+      poolName,
+    );
+  });
+
+  // TokenExchange -> 0xb2e76ae99761dc136e598d4a629bb347eccb9532a5f8bbd72e18467c3c34cc98
+  describe('TokenExchange', () => {
+    it(`State after 27019055`, async () => {
+      const blockNumber = 27019055;
+      await testEventSubscriber(
+        nervePool,
+        nervePool.addressesSubscribed,
+        (_blockNumber: number) => fetchPoolState(nervePool, _blockNumber),
+        blockNumber,
+        Nerve.getIdentifier(dexKey, testPoolAddress),
+        dexHelper.provider,
+      );
+    });
+    it(`State after 27019043`, async () => {
+      const blockNumber = 27019043;
+      await testEventSubscriber(
+        nervePool,
+        nervePool.addressesSubscribed,
+        (_blockNumber: number) => fetchPoolState(nervePool, _blockNumber),
+        blockNumber,
+        Nerve.getIdentifier(dexKey, testPoolAddress),
+        dexHelper.provider,
+      );
+    });
+    it(`State after 27019042`, async () => {
+      const blockNumber = 27019042;
+      await testEventSubscriber(
+        nervePool,
+        nervePool.addressesSubscribed,
+        (_blockNumber: number) => fetchPoolState(nervePool, _blockNumber),
+        blockNumber,
+        Nerve.getIdentifier(dexKey, testPoolAddress),
+        dexHelper.provider,
+      );
+    });
+    it(`State after 27018991`, async () => {
+      const blockNumber = 27018991;
+      await testEventSubscriber(
+        nervePool,
+        nervePool.addressesSubscribed,
+        (_blockNumber: number) => fetchPoolState(nervePool, _blockNumber),
+        blockNumber,
+        Nerve.getIdentifier(dexKey, testPoolAddress),
+        dexHelper.provider,
+      );
+    });
+    it(`State after 27018933`, async () => {
+      const blockNumber = 27018933;
+      await testEventSubscriber(
+        nervePool,
+        nervePool.addressesSubscribed,
+        (_blockNumber: number) => fetchPoolState(nervePool, _blockNumber),
+        blockNumber,
+        Nerve.getIdentifier(dexKey, testPoolAddress),
+        dexHelper.provider,
+      );
+    });
+  });
+
+  // AddLiquidity -> 0x189c623b666b1b45b83d7178f39b8c087cb09774317ca2f53c2d3c3726f222a2
+  describe('AddLiquidity', () => {
+    it(`State after 27019013`, async () => {
+      const blockNumber = 27019013;
+      await testEventSubscriber(
+        nervePool,
+        nervePool.addressesSubscribed,
+        (_blockNumber: number) => fetchPoolState(nervePool, _blockNumber),
+        blockNumber,
+        Nerve.getIdentifier(dexKey, testPoolAddress),
+        dexHelper.provider,
+      );
+    });
+    it(`State after 27017516`, async () => {
+      const blockNumber = 27017516;
+      await testEventSubscriber(
+        nervePool,
+        nervePool.addressesSubscribed,
+        (_blockNumber: number) => fetchPoolState(nervePool, _blockNumber),
+        blockNumber,
+        Nerve.getIdentifier(dexKey, testPoolAddress),
+        dexHelper.provider,
+      );
+    });
+    it(`State after 27017515`, async () => {
+      const blockNumber = 27017515;
+      await testEventSubscriber(
+        nervePool,
+        nervePool.addressesSubscribed,
+        (_blockNumber: number) => fetchPoolState(nervePool, _blockNumber),
+        blockNumber,
+        Nerve.getIdentifier(dexKey, testPoolAddress),
+        dexHelper.provider,
+      );
+    });
+    it(`State after 27017333`, async () => {
+      const blockNumber = 27017333;
+      await testEventSubscriber(
+        nervePool,
+        nervePool.addressesSubscribed,
+        (_blockNumber: number) => fetchPoolState(nervePool, _blockNumber),
+        blockNumber,
+        Nerve.getIdentifier(dexKey, testPoolAddress),
+        dexHelper.provider,
+      );
+    });
+    it(`State after 27015656`, async () => {
+      const blockNumber = 27015656;
+      await testEventSubscriber(
+        nervePool,
+        nervePool.addressesSubscribed,
+        (_blockNumber: number) => fetchPoolState(nervePool, _blockNumber),
+        blockNumber,
+        Nerve.getIdentifier(dexKey, testPoolAddress),
+        dexHelper.provider,
+      );
+    });
+  });
+
+  // RemoveLiquidity -> 0x347ad828e58cbe534d8f6b67985d791360756b18f0d95fd9f197a66cc46480ea
+  describe('RemoveLiquidity', () => {
+    it(`State after 27009010`, async () => {
+      const blockNumber = 27009010;
+      await testEventSubscriber(
+        nervePool,
+        nervePool.addressesSubscribed,
+        (_blockNumber: number) => fetchPoolState(nervePool, _blockNumber),
+        blockNumber,
+        Nerve.getIdentifier(dexKey, testPoolAddress),
+        dexHelper.provider,
+      );
+    });
+    it(`State after 26993341`, async () => {
+      const blockNumber = 26993341;
+      await testEventSubscriber(
+        nervePool,
+        nervePool.addressesSubscribed,
+        (_blockNumber: number) => fetchPoolState(nervePool, _blockNumber),
+        blockNumber,
+        Nerve.getIdentifier(dexKey, testPoolAddress),
+        dexHelper.provider,
+      );
+    });
+    it(`State after 26993296`, async () => {
+      const blockNumber = 26993296;
+      await testEventSubscriber(
+        nervePool,
+        nervePool.addressesSubscribed,
+        (_blockNumber: number) => fetchPoolState(nervePool, _blockNumber),
+        blockNumber,
+        Nerve.getIdentifier(dexKey, testPoolAddress),
+        dexHelper.provider,
+      );
+    });
+    it(`State after 26973410`, async () => {
+      const blockNumber = 26973410;
+      await testEventSubscriber(
+        nervePool,
+        nervePool.addressesSubscribed,
+        (_blockNumber: number) => fetchPoolState(nervePool, _blockNumber),
+        blockNumber,
+        Nerve.getIdentifier(dexKey, testPoolAddress),
+        dexHelper.provider,
+      );
+    });
+    it(`State after 26749868`, async () => {
+      const blockNumber = 26749868;
+      await testEventSubscriber(
+        nervePool,
+        nervePool.addressesSubscribed,
+        (_blockNumber: number) => fetchPoolState(nervePool, _blockNumber),
+        blockNumber,
+        Nerve.getIdentifier(dexKey, testPoolAddress),
+        dexHelper.provider,
+      );
+    });
+  });
+
+  // NewFee -> 0xcfca96e0fef3432146913b2a5a2268a55d3f475fe057e7ffde1082b77693f4f3
+  describe('NewFee', () => {
+    it(`State after 17064317`, async () => {
+      const blockNumber = 17064317;
+      await testEventSubscriber(
+        nervePool,
+        nervePool.addressesSubscribed,
+        (_blockNumber: number) => fetchPoolState(nervePool, _blockNumber),
+        blockNumber,
+        Nerve.getIdentifier(dexKey, testPoolAddress),
+        dexHelper.provider,
+      );
+    });
+    it(`State after 16813530`, async () => {
+      const blockNumber = 16813530;
+      await testEventSubscriber(
+        nervePool,
+        nervePool.addressesSubscribed,
+        (_blockNumber: number) => fetchPoolState(nervePool, _blockNumber),
+        blockNumber,
+        Nerve.getIdentifier(dexKey, testPoolAddress),
+        dexHelper.provider,
+      );
+    });
+    it(`State after 16632075`, async () => {
+      const blockNumber = 16632075;
+      await testEventSubscriber(
+        nervePool,
+        nervePool.addressesSubscribed,
+        (_blockNumber: number) => fetchPoolState(nervePool, _blockNumber),
+        blockNumber,
+        Nerve.getIdentifier(dexKey, testPoolAddress),
+        dexHelper.provider,
+      );
+    });
+  });
+
+  // RampA -> 0xa2b71ec6df949300b59aab36b55e189697b750119dd349fcfa8c0f779e83c254
+  describe('RampA', () => {
+    it(`State after 17202291`, async () => {
+      const blockNumber = 17202291;
+      await testEventSubscriber(
+        nervePool,
+        nervePool.addressesSubscribed,
+        (_blockNumber: number) => fetchPoolState(nervePool, _blockNumber),
+        blockNumber,
+        Nerve.getIdentifier(dexKey, testPoolAddress),
+        dexHelper.provider,
+      );
+    });
+    it(`State after 17132310`, async () => {
+      const blockNumber = 17132310;
+      await testEventSubscriber(
+        nervePool,
+        nervePool.addressesSubscribed,
+        (_blockNumber: number) => fetchPoolState(nervePool, _blockNumber),
+        blockNumber,
+        Nerve.getIdentifier(dexKey, testPoolAddress),
+        dexHelper.provider,
+      );
+    });
+    it(`State after 17062453`, async () => {
+      const blockNumber = 17062453;
+      await testEventSubscriber(
+        nervePool,
+        nervePool.addressesSubscribed,
+        (_blockNumber: number) => fetchPoolState(nervePool, _blockNumber),
+        blockNumber,
+        Nerve.getIdentifier(dexKey, testPoolAddress),
+        dexHelper.provider,
+      );
+    });
+    it(`State after 16809165`, async () => {
+      const blockNumber = 16809165;
+      await testEventSubscriber(
+        nervePool,
+        nervePool.addressesSubscribed,
+        (_blockNumber: number) => fetchPoolState(nervePool, _blockNumber),
+        blockNumber,
+        Nerve.getIdentifier(dexKey, testPoolAddress),
+        dexHelper.provider,
+      );
+    });
+  });
+
+  // StopRampA -> 0x46e22fb3709ad289f62ce63d469248536dbc78d82b84a3d7e74ad606dc201938
+  describe('StopRampA', () => {
+    it(`State after 17095506`, async () => {
+      const blockNumber = 17095506;
+      await testEventSubscriber(
+        nervePool,
+        nervePool.addressesSubscribed,
+        (_blockNumber: number) => fetchPoolState(nervePool, _blockNumber),
+        blockNumber,
+        Nerve.getIdentifier(dexKey, testPoolAddress),
+        dexHelper.provider,
+      );
+    });
+  });
+
+  // RemoveLiquidityOne -> 0x5ad056f2e28a8cec232015406b843668c1e36cda598127ec3b8c59b8c72773a0
+  // We do not support RemoveLiquidityOne as it requires onchain call of exact values
+
+  // RemoveLiquidityImbalance -> 0x3631c28b1f9dd213e0319fb167b554d76b6c283a41143eb400a0d1adb1af1755
+  // No events for RemoveLiquidityImbalance
+});
+
 describe('Synapse Event Pool Arbitrum', async () => {
   const dexKey = 'Synapse';
   const network = Network.ARBITRUM;
