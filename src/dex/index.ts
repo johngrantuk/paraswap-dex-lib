@@ -18,7 +18,6 @@ import { AaveV2 } from './aave-v2/aave-v2';
 import { AaveV3 } from './aave-v3/aave-v3';
 import { DodoV1 } from './dodo-v1/dodo-v1';
 import { DodoV2 } from './dodo-v2';
-import { Smoothy } from './smoothy/smoothy';
 import { Nerve } from './nerve/nerve';
 import { IDexHelper } from '../dex-helper';
 import { SwapSide } from '../constants';
@@ -108,7 +107,6 @@ import { Cap } from './cap/cap';
 const LegacyDexes = [
   CurveV2,
   StablePool,
-  Smoothy,
   Bancor,
   Compound,
   DodoV1,
