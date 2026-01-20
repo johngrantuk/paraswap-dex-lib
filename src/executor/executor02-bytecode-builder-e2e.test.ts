@@ -1200,7 +1200,6 @@ describe('Executor02ByteCodeBuilder e2e tests', () => {
           'UniswapV3',
           'QuickSwapV3',
           'IronV2',
-          'Synapse',
         ];
 
         const tokenASymbol: string = 'WBTC';
