@@ -252,9 +252,7 @@ export class OSwapEventPool extends StatefulEventSubscriber<OSwapPoolState> {
       state.totalAssets
     ) {
       // Asset transfer to vault increases totalAssets
-      updatedTotalAssets = (
-        BigInt(state.totalAssets) + amount
-      ).toString();
+      updatedTotalAssets = (BigInt(state.totalAssets) + amount).toString();
     }
 
     // Update pool balances for transfers from/to the pool

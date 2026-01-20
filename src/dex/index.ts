@@ -2,7 +2,6 @@ import _ from 'lodash';
 import { UnoptimizedRate } from '../types';
 import { CurveV2 } from './curve-v2/curve-v2';
 import { IDexTxBuilder, DexConstructor, IDex, IRouteOptimizer } from './idex';
-import { JarvisV6 } from './jarvis-v6/jarvis-v6';
 import { StablePool } from './stable-pool/stable-pool';
 import { Weth } from './weth/weth';
 import { PolygonMigrator } from './polygon-migrator/polygon-migrator';
@@ -13,20 +12,14 @@ import { UniswapV2 } from './uniswap-v2/uniswap-v2';
 import { UniswapV2Alias } from './uniswap-v2/constants';
 import { uniswapMerge } from './uniswap-v2/optimizer';
 import { BiSwap } from './uniswap-v2/biswap';
-import { Bancor } from './bancor/bancor';
-import { Compound } from './compound/compound';
-import { AaveV2 } from './aave-v2/aave-v2';
 import { AaveV3 } from './aave-v3/aave-v3';
 import { DodoV1 } from './dodo-v1/dodo-v1';
 import { DodoV2 } from './dodo-v2';
-import { Smoothy } from './smoothy/smoothy';
 import { Nerve } from './nerve/nerve';
 import { IDexHelper } from '../dex-helper';
 import { SwapSide } from '../constants';
 import { Adapters } from '../types';
 import { Lido } from './lido/lido';
-import { KyberDmm } from './kyberdmm/kyberdmm';
-import { GMX } from './gmx/gmx';
 import { WooFiV2 } from './woo-fi-v2/woo-fi-v2';
 import { ParaSwapLimitOrders } from './paraswap-limit-orders/paraswap-limit-orders';
 import { AugustusRFQOrder } from './augustus-rfq';
@@ -43,7 +36,6 @@ import { BalancerV1 } from './balancer-v1/balancer-v1';
 import { balancerV1Merge } from './balancer-v1/optimizer';
 import { CurveV1 } from './curve-v1/curve-v1';
 import { CurveFork } from './curve-v1/forks/curve-forks/curve-forks';
-import { Swerve } from './curve-v1/forks/swerve/swerve';
 import { CurveV1Factory } from './curve-v1-factory/curve-v1-factory';
 import { CurveV1StableNg } from './curve-v1-stable-ng/curve-v1-stable-ng';
 import { curveV1Merge } from './curve-v1-factory/optimizer';
@@ -56,9 +48,7 @@ import { SolidlyEthereum } from './solidly/solidly-ethereum';
 import { MaverickV1 } from './maverick-v1/maverick-v1';
 import { MaverickV2 } from './maverick-v2/maverick-v2';
 import { QuickSwapV3 } from './quickswap/quickswap-v3';
-import { ThenaFusion } from './quickswap/thena-fusion';
 import { SwaapV2 } from './swaap-v2/swaap-v2';
-import { TraderJoeV21 } from './trader-joe-v2.1/trader-joe-v2.1';
 import { TraderJoeV22 } from './trader-joe-v2.1/trader-joe-v2.2';
 import { PancakeswapV3 } from './pancakeswap-v3/pancakeswap-v3';
 import { Algebra } from './algebra/algebra';
@@ -66,7 +56,6 @@ import { AngleTransmuter } from './angle-transmuter/angle-transmuter';
 import { AngleStakedStable } from './angle-staked-stable/angle-staked-stable';
 import { Dexalot } from './dexalot/dexalot';
 import { Bebop } from './bebop/bebop';
-import { Wombat } from './wombat/wombat';
 import { Swell } from './swell/swell';
 import { PharaohV1 } from './solidly/forks-override/pharaohV1';
 import { PharaohV3 } from './uniswap-v3/forks/pharaoh-v3/pharaoh-v3';
@@ -80,7 +69,6 @@ import { AaveV3StataV2 } from './aave-v3-stata-v2/aave-v3-stata-v2';
 import { OSwap } from './oswap/oswap';
 import { FluidDex } from './fluid-dex/fluid-dex';
 import { FluidDexLite } from './fluid-dex-lite/fluid-dex-lite';
-import { ConcentratorArusd } from './concentrator-arusd/concentrator-arusd';
 import { FxProtocolRusd } from './fx-protocol-rusd/fx-protocol-rusd';
 import { AaveGsm } from './aave-gsm/aave-gsm';
 import { LitePsm } from './lite-psm/lite-psm';
@@ -89,7 +77,6 @@ import { BalancerV3 } from './balancer-v3/balancer-v3';
 import { balancerV3Merge } from './balancer-v3/optimizer';
 import { SkyConverter } from './sky-converter/sky-converter';
 import { Cables } from './cables/cables';
-import { Stader } from './stader/stader';
 import { UsualBond } from './usual/usual-bond';
 import { UsdcUsualUSDC } from './usual/usdc-usual-usdc';
 import { UsualUSDCUsd0 } from './usual/usual-usdc-usd0';
@@ -109,20 +96,14 @@ import { RingV2 } from './uniswap-v2/ring-v2';
 import { UsdcTransmuter } from './usdc-transmuter/usdc-transmuter';
 import { Blackhole } from './solidly/forks-override/blackhole';
 import { BlackholeCL } from './algebra-integral/forks/blackhole-cl';
-import { BunniV2 } from './bunni-v2/bunni-v2';
 import { Cap } from './cap/cap';
 
 const LegacyDexes = [
   CurveV2,
   StablePool,
-  Smoothy,
-  Bancor,
-  Compound,
   DodoV1,
   DodoV2,
   QuickSwapV3,
-  ThenaFusion,
-  TraderJoeV21,
   TraderJoeV22,
   Lido,
   AugustusRFQOrder,
@@ -130,12 +111,10 @@ const LegacyDexes = [
 ];
 
 const Dexes = [
-  Stader,
   Bebop,
   Dexalot,
   CurveV1,
   CurveFork,
-  Swerve,
   BalancerV1,
   BalancerV2,
   BalancerV3,
@@ -148,14 +127,10 @@ const Dexes = [
   PancakeswapV3,
   VelodromeSlipstream,
   BiSwap,
-  AaveV2,
   AaveV3,
-  KyberDmm,
   Weth,
   PolygonMigrator,
   Nerve,
-  GMX,
-  JarvisV6,
   WooFiV2,
   ParaSwapLimitOrders,
   Solidly,
@@ -180,7 +155,6 @@ const Dexes = [
   AngleTransmuter,
   AngleStakedStable,
   SolidlyV3,
-  Wombat,
   Swell,
   PharaohV1,
   PharaohV3,
@@ -189,7 +163,6 @@ const Dexes = [
   AaveV3Stata,
   AaveV3StataV2,
   OSwap,
-  ConcentratorArusd,
   FxProtocolRusd,
   AaveGsm,
   LitePsm,
@@ -213,7 +186,6 @@ const Dexes = [
   UsdcTransmuter,
   Blackhole,
   BlackholeCL,
-  BunniV2,
   Cap,
 ];
 
