@@ -57,7 +57,6 @@ import { AngleTransmuter } from './angle-transmuter/angle-transmuter';
 import { AngleStakedStable } from './angle-staked-stable/angle-staked-stable';
 import { Dexalot } from './dexalot/dexalot';
 import { Bebop } from './bebop/bebop';
-import { Wombat } from './wombat/wombat';
 import { Swell } from './swell/swell';
 import { PharaohV1 } from './solidly/forks-override/pharaohV1';
 import { PharaohV3 } from './uniswap-v3/forks/pharaoh-v3/pharaoh-v3';
@@ -158,7 +157,6 @@ const Dexes = [
   AngleTransmuter,
   AngleStakedStable,
   SolidlyV3,
-  Wombat,
   Swell,
   PharaohV1,
   PharaohV3,
