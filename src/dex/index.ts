@@ -12,7 +12,6 @@ import { UniswapV2 } from './uniswap-v2/uniswap-v2';
 import { UniswapV2Alias } from './uniswap-v2/constants';
 import { uniswapMerge } from './uniswap-v2/optimizer';
 import { BiSwap } from './uniswap-v2/biswap';
-import { Bancor } from './bancor/bancor';
 import { AaveV3 } from './aave-v3/aave-v3';
 import { DodoV1 } from './dodo-v1/dodo-v1';
 import { DodoV2 } from './dodo-v2';
@@ -104,7 +103,6 @@ import { Cap } from './cap/cap';
 const LegacyDexes = [
   CurveV2,
   StablePool,
-  Bancor,
   DodoV1,
   DodoV2,
   QuickSwapV3,
